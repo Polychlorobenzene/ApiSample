@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2015
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi", "WebApi\WebApi.csproj", "{2D0C7F61-9B0D-45E5-9C59-1F621BBE2717}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiClient", "ApiClient\ApiClient.csproj", "{10057FC4-F6FD-4FF8-80A6-990C1D1CB3A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiTests", "ApiTests\ApiTests.csproj", "{CFF54C16-8681-4453-99D5-1704E79D269C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2D0C7F61-9B0D-45E5-9C59-1F621BBE2717}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D0C7F61-9B0D-45E5-9C59-1F621BBE2717}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D0C7F61-9B0D-45E5-9C59-1F621BBE2717}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D0C7F61-9B0D-45E5-9C59-1F621BBE2717}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10057FC4-F6FD-4FF8-80A6-990C1D1CB3A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10057FC4-F6FD-4FF8-80A6-990C1D1CB3A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10057FC4-F6FD-4FF8-80A6-990C1D1CB3A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10057FC4-F6FD-4FF8-80A6-990C1D1CB3A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFF54C16-8681-4453-99D5-1704E79D269C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFF54C16-8681-4453-99D5-1704E79D269C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFF54C16-8681-4453-99D5-1704E79D269C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFF54C16-8681-4453-99D5-1704E79D269C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {60FC1BC8-CD31-48AF-935A-60947BD54004}
+	EndGlobalSection
+EndGlobal
