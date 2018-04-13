@@ -42,8 +42,7 @@ namespace WebApi
                     var converter = TypeDescriptor.GetConverter(typeof(T));
                     if (converter != null)
                     {
-                        return
-(T)converter.ConvertFromString(Content.ToString());
+                        return (T)converter.ConvertFromString(Content.ToString());
                     }
                     throw exception;
                 }

@@ -66,9 +66,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ApiClient\ApiClient.csproj">
-      <Project>{10057fc4-f6fd-4ff8-80a6-990c1d1cb3a1}</Project>
-      <Name>ApiClient</Name>
+    <ProjectReference Include="..\Client\Client.csproj">
+      <Project>{c460e63d-68b3-477e-b073-13ca5deaa540}</Project>
+      <Name>Client</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebApi\WebApi.csproj">
       <Project>{2d0c7f61-9b0d-45e5-9c59-1f621bbe2717}</Project>

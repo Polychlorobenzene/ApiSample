@@ -18,6 +18,10 @@ namespace WebApi.Handlers
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = await base.SendAsync(request, cancellationToken);
+            if (request.RequestUri.OriginalString.ToLower().Contains("swagger"))
+            {
+                return response;
+            }
             try
             {
                 return GenerateResponse(request, response);

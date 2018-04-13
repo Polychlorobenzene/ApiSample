@@ -5,9 +5,11 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
+using WebApi.Handlers;
+
 namespace WebApi.Controllers
 {
-    [Authorize]
+    [KeyAuthorize]
     public class ValuesController : ApiController
     {
         // GET api/values
