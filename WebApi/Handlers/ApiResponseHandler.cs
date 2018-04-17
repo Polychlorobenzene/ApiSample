@@ -13,8 +13,9 @@ using WebApi;
 
 namespace WebApi.Handlers
 {
-    public class ApiResponseHandler: DelegatingHandler
+    public class ApiResponseHandler : DelegatingHandler
     {
+        //Original source: https://www.infoworld.com/article/3207541/application-development/how-to-make-your-asp-net-web-api-responses-consistent-and-useful.html by Joydip Kanjilal
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = await base.SendAsync(request, cancellationToken);
@@ -37,7 +38,7 @@ namespace WebApi.Handlers
             HttpStatusCode statusCode = response.StatusCode;
             if (!IsResponseValid(response))
             {
-                return request.CreateResponse(HttpStatusCode.BadRequest, "Invalid response..");
+                return request.CreateResponse(HttpStatusCode.BadRequest, "Invalid Request");
             }
             object responseContent;
             if (response.TryGetContentValue(out responseContent))
@@ -64,8 +65,23 @@ namespace WebApi.Handlers
         }
         private bool IsResponseValid(HttpResponseMessage response)
         {
-            if ((response != null) && (response.StatusCode == HttpStatusCode.OK))
-                return true;
+            if ((response != null))
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Accepted:
+                    case HttpStatusCode.Continue:
+                    case HttpStatusCode.Created:
+                    case HttpStatusCode.NoContent:
+                    case HttpStatusCode.NonAuthoritativeInformation:
+                    case HttpStatusCode.OK:
+                    case HttpStatusCode.PartialContent:
+                    case HttpStatusCode.ResetContent:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
             return false;
         }
     }
