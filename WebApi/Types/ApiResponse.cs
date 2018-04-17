@@ -16,8 +16,9 @@ namespace WebApi
         public string ErrorMessage { get; set; }
         public object Content { get; set; }
         public DateTime Timestamp { get; set; }
+        public Type ExpectedContentType { get; set; }       
         public long? Size { get; set; }
-
+               
         /// <summary>
         /// Get
         /// </summary>
@@ -52,5 +53,7 @@ namespace WebApi
                 }
             }
         }
+
+
     }
 }

@@ -17,6 +17,12 @@ namespace ApiClient
             return await GetAsync<ApiResponse>(uri);
         }
 
+        public async Task<ApiResponse> GetDecimal()
+        {
+            var uri = BuildUri($"Values/Decimal");
+            return await GetAsync<ApiResponse>(uri);
+        }
+
         public async Task<ApiResponse> GetMyDto()
         {
             var uri = BuildUri($"Values/Dto");

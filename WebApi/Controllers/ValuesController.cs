@@ -24,6 +24,12 @@ namespace WebApi.Controllers
             return "value";
         }
 
+        [HttpGet, Route("api/Values/Decimal")]
+        public IHttpActionResult GetDecimal ()
+        {
+            decimal d = 1.25m;
+            return Ok(d);
+        }
         // POST api/values
         public void Post([FromBody]string value)
         {

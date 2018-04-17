@@ -51,6 +51,7 @@ namespace WebApi.Handlers
                 }
             }
             ApiResponse apiResponse = new ApiResponse();
+            apiResponse.ExpectedContentType = responseContent.GetType();
             apiResponse.Version = "1.0";
             apiResponse.StatusCode = statusCode;
             apiResponse.Content = responseContent;

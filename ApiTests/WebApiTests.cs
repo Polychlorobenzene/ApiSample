@@ -28,6 +28,13 @@ namespace ApiTests
             Assert.IsNotNull(data.Content);
         }
         [TestMethod]
+        public async Task TestGetDecimal()
+        {
+            ApiResponse data = await _Client.GetDecimal();
+            decimal d = data.GetTypedContent<decimal>();
+            Assert.IsTrue(d > 0);
+        }
+        [TestMethod]
         public async Task TestGetDto()
         {
             ApiResponse data = await _Client.GetMyDto();
