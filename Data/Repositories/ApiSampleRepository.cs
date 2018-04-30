@@ -11,24 +11,39 @@ namespace ApiSample.Data.Repositories
 {
     public class ApiSampleRepository : IDisposable
     {
-        public List<PersonSearchResults> SearchPeople(PagedSearchDto dto)
+        public PagedSearchResponseDto<List<PersonSearchResultDto>> SearchPeople(PagedSearchDto dto)
         {
             using (ApiSampleDbContext context = new ApiSampleDbContext())
             {
-                SqlParameter pageSize = new SqlParameter("@PageSize", dto.PageSize ?? (object)DBNull.Value);
-                pageSize.DbType = System.Data.DbType.Int32;
-                SqlParameter pageNumber = new SqlParameter("@PageNumber", dto.PageNumber ?? (object)DBNull.Value);
-                pageNumber.DbType = System.Data.DbType.Int32;
+                SqlParameter pageSize = new SqlParameter("@PageSize", dto.PageSize ?? (object)DBNull.Value)
+                {
+                    DbType = System.Data.DbType.Int32
+                };
+                SqlParameter pageNumber = new SqlParameter("@PageNumber", dto.PageNumber ?? (object)DBNull.Value)
+                {
+                    DbType = System.Data.DbType.Int32
+                };
                 SqlParameter orderBy = new SqlParameter("@OrderBy", string.IsNullOrEmpty(dto.OrderByColumn) ? (object)DBNull.Value : dto.OrderByColumn);
                 SqlParameter orderAsc = new SqlParameter("@OrderAsc", dto.OrderAscending ?? (object)DBNull.Value);
-                SqlParameter totalRows = new SqlParameter("@TotalRows",0);
-                totalRows.DbType = System.Data.DbType.Int32;
-                totalRows.Direction = System.Data.ParameterDirection.Output;
+                SqlParameter totalRows = new SqlParameter("@TotalRows", 0)
+                {
+                    DbType = System.Data.DbType.Int32,
+                    Direction = System.Data.ParameterDirection.Output
+                };
 
-                List<PersonSearchResults> results = context.Database.SqlQuery<PersonSearchResults>("EXEC dbo.GetPeople @PageSize, @PageNumber, @OrderBy, @OrderAsc, @TotalRows OUTPUT",
+                List<PersonSearchResultDto> results = context.Database.SqlQuery<PersonSearchResultDto>("EXEC dbo.GetPeople @PageSize, @PageNumber, @OrderBy, @OrderAsc, @TotalRows OUTPUT",
                     pageSize, pageNumber, orderBy, orderAsc, totalRows).ToList();
 
-                return results;
+                PagedSearchResponseDto<List<PersonSearchResultDto>> response = new PagedSearchResponseDto<List<PersonSearchResultDto>>
+                {
+                    PageSize = dto.PageSize,
+                    PageNumber = dto.PageNumber,
+                    OrderByColumn = dto.OrderByColumn,
+                    OrderAscending = dto.OrderAscending,
+                    TotalRows = (int?)totalRows.Value,
+                    Result = results
+                };
+                return response;
             }
         }
 

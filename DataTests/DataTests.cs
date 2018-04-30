@@ -24,9 +24,9 @@ namespace DataTests
                 dto.OrderByColumn = "PersonId";
                 dto.OrderAscending = true;
                 dto.TotalRows = 0;
-                List<PersonSearchResults> results = repository.SearchPeople(dto);
-                Assert.IsTrue(results.Count == 25);
-                Assert.IsTrue(results.First().PersonId == 26);
+                PagedSearchResponseDto<List<PersonSearchResultDto>> response = repository.SearchPeople(dto);
+                Assert.IsTrue(response.Result.Count == 25);
+                Assert.IsTrue(response.Result.First().PersonId == 26);
             }
         }
         [TestMethod]

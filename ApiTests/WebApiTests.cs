@@ -76,9 +76,9 @@ namespace ApiTests
             dto.TotalRows = 0;
             ApiResponse response = await _Client.GetPeople(dto);
 
-            List<PersonSearchResults> data = response.GetTypedContent<List<PersonSearchResults>>();
+            PagedSearchResponseDto<List<PersonSearchResultDto>> data = response.GetTypedContent<PagedSearchResponseDto<List<PersonSearchResultDto>>>();
 
-            Assert.AreEqual(dto.PageSize, data.Count);
+            Assert.AreEqual(dto.PageSize, data.Result.Count);
 
         }
 
