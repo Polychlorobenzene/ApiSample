@@ -22,6 +22,8 @@ AS
 			,[MiddleName]
 	FROM [ApiSample].[dbo].[Person];
 
+	SELECT @TotalRows = COUNT(1) FROM @table;
+
 	IF @OrderBy = 'PersonId'
 		BEGIN
 			SELECT * FROM @table
@@ -54,3 +56,5 @@ AS
 		END DESC
 	OFFSET ((@PageNumber - 1) * @PageSize) ROWS
 	FETCH NEXT @PageSize ROWS ONLY
+
+	Return @TotalRows;

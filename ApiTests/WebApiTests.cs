@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 
 using WebApi;
+using ApiSample.Data.Entities;
 
 namespace ApiTests
 {
@@ -62,6 +63,23 @@ namespace ApiTests
             MasterApiDto dto = data.GetTypedContent<MasterApiDto>();
 
             Assert.IsNotNull(dto);
+        }
+
+        [TestMethod]
+        public async Task MyTestMethod()
+        {
+            PagedSearchDto dto = new PagedSearchDto();
+            dto.PageSize = 25;
+            dto.PageNumber = 2;
+            dto.OrderByColumn = "FirstName";
+            dto.OrderAscending = true;
+            dto.TotalRows = 0;
+            ApiResponse response = await _Client.GetPeople(dto);
+
+            List<PersonSearchResults> data = response.GetTypedContent<List<PersonSearchResults>>();
+
+            Assert.AreEqual(dto.PageSize, data.Count);
+
         }
 
         [TestMethod]

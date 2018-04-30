@@ -5,6 +5,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
+using WebApi;
+
 namespace ApiClient
 {
     public abstract class ClientBase : IDisposable
@@ -23,6 +25,12 @@ namespace ApiClient
         #endregion
 
         #region Functions
+        /// <summary>
+        /// Gets the async Typed result from the endpoint specified in the Uri
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <returns></returns>
         protected async Task<TResult> GetAsync<TResult>(Uri requestUri)
         {
             HttpResponseMessage response;
@@ -45,7 +53,44 @@ namespace ApiClient
             }
 
         }
+        /// <summary>
+        /// Gets the async ApiResponse result from the endpoint specified in the Uri
+        /// </summary>
+        /// <param name="requestUri"></param>
+        /// <returns></returns>
+        protected async Task<ApiResponse> GetResultAsync(Uri requestUri)
+        {
+            HttpResponseMessage response;
 
+            try
+            {
+                response = await _ClientProvider.Client.GetAsync(requestUri);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    ApiResponse notFound = new ApiResponse();
+                    notFound.StatusCode = System.Net.HttpStatusCode.NotFound;
+                    notFound.Content = response.Content;
+                    return notFound;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsAsync<ApiResponse>();
+            }
+            catch (HttpRequestException ex)
+            {
+                // Handle error response..
+                throw new ApiException<Uri>(requestUri, ex);
+            }
+
+        }
+        /// <summary>
+        /// Gets the Typed result from the endpoint specified in the Uri
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <returns></returns>
         protected TResult Get<TResult>(Uri requestUri)
         {
             HttpResponseMessage response;
@@ -66,12 +111,48 @@ namespace ApiClient
                 // Handle error response..
                 throw new ApiException<Uri>(requestUri, ex);
             }
+        }
+        /// <summary>
+        /// Gets the ApiResponse result from the endpoint specified in the Uri
+        /// </summary>
+        /// <param name="requestUri"></param>
+        /// <returns></returns>
+        protected ApiResponse GetResult(Uri requestUri)
+        {
+            HttpResponseMessage response;
+
+            try
+            {
+                response = _ClientProvider.Client.GetAsync(requestUri).Result;
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    ApiResponse notFound = new ApiResponse();
+                    notFound.StatusCode = System.Net.HttpStatusCode.NotFound;
+                    return notFound;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                return response.Content.ReadAsAsync<ApiResponse>().Result;
+            }
+            catch (HttpRequestException ex)
+            {
+                // Handle error response..
+                throw new ApiException<Uri>(requestUri, ex);
+            }
 
         }
 
+        /// <summary>
+        /// Gets the dserialized object of the TResult Type
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <returns></returns>
         protected async Task<TResult> GetWithKnownTypesAsync<TResult>(Uri requestUri)
         {
-
+            //Not sure this does anything different than the GetAsync<TResult> method.
             HttpResponseMessage response;
 
             try
@@ -99,6 +180,14 @@ namespace ApiClient
             }
         }
 
+        /// <summary>
+        /// Posts a value of Type TRequest and returns a response of Type TResult async
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         protected async Task<TResult> PostAsync<TRequest, TResult>(Uri requestUri, TRequest request)
         {
             try
@@ -119,6 +208,45 @@ namespace ApiClient
             }
         }
 
+        /// <summary>
+        /// Posts a value of Type TRequest and returns an ApiResponse async
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        protected async Task<ApiResponse> PostResultAsync<TRequest>(Uri requestUri, TRequest request)
+        {
+            try
+            {
+                var response = await _ClientProvider.Client.PostAsJsonAsync(requestUri, request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    ApiResponse notFound = new ApiResponse();
+                    notFound.StatusCode = System.Net.HttpStatusCode.NotFound;
+                    return notFound;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsAsync<ApiResponse>();
+            }
+            catch (HttpRequestException ex)
+            {
+                // Handle error response..
+                throw new ApiException<TRequest>(request, ex);
+            }
+        }
+
+        /// <summary>
+        /// Posts a value of Type TRequest and returns a response of Type TResult
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         protected TResult Post<TRequest, TResult>(Uri requestUri, TRequest request)
         {
             HttpResponseMessage response;
@@ -141,6 +269,45 @@ namespace ApiClient
             }
         }
 
+        /// <summary>
+        /// Posts a value of Type TRequest and returns an ApiResponse
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        protected ApiResponse PostResult<TRequest>(Uri requestUri, TRequest request)
+        {
+            try
+            {
+                var response = _ClientProvider.Client.PostAsJsonAsync(requestUri, request).Result;
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    ApiResponse notFound = new ApiResponse();
+                    notFound.StatusCode = System.Net.HttpStatusCode.NotFound;
+                    return notFound;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                return response.Content.ReadAsAsync<ApiResponse>().Result;
+            }
+            catch (HttpRequestException ex)
+            {
+                // Handle error response..
+                throw new ApiException<TRequest>(request, ex);
+            }
+        }
+
+        /// <summary>
+        /// Posts a value of Type TRequest and returns a deserialized TResult response async
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="requestUri"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         protected async Task<TResult> PostWithKnownTypesAsync<TRequest, TResult>(Uri requestUri, TRequest request)
         {
 
@@ -176,11 +343,21 @@ namespace ApiClient
 
         }
 
+        /// <summary>
+        /// Builds a Uri from a string address appended to the Client BaseAddress and the Route prefix
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
         protected Uri BuildUri(string url)
         {
             return new Uri(new Uri(_ClientProvider.Client.BaseAddress, _RoutePrefix), url);
         }
 
+        /// <summary>
+        /// Builds a Uri from the uri provided appended to the Client BaseAddress and the Route prefix
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>>
         protected Uri BuildUri(Uri url)
         {
             return new Uri(new Uri(_ClientProvider.Client.BaseAddress, _RoutePrefix), url);

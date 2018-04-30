@@ -1,6 +1,6 @@
 ﻿<#@ template debug="false" hostspecific="true" language="C#" #>
 <#@ output extension= "/" #>
-<#@ include file="..\Resources\MultipleOutputHelper.ttinclude" #>
+<#@ include file=".\MultipleOutputHelper.ttinclude" #>
 <#@ assembly name="System.Core" #>
 <#@ assembly name="System.Data" #>
 <#@ assembly name="Microsoft.SqlServer.Smo" #>
@@ -14,7 +14,7 @@
 <#@ import namespace="System.Data.SqlClient" #>
 <#@ import namespace="Microsoft.SqlServer.Management.Common" #>
 <#@ import namespace="Microsoft.SqlServer.Management.Smo" #>
-<#@ include file="..\..\includeTables.ttinclude" #>
+<#@ include file=".\includeTables.ttinclude" #>
 <#
 //	NOTE:
 //		tablesToInclude is sourced from the includeTables.ttinclude file at the solution root
@@ -33,11 +33,11 @@
 	Utility.TablesWithUniquePks = _tablesWithUniquePks.ToList();
 	
 	//Set up connection
-	string connectionString = "Server=.\\SQL2016;trusted_connection=true";
-	string sqlDatabase = "BCS";
+	string connectionString = "Server=.\\SQL2017;trusted_connection=true";
+	string sqlDatabase = "ApiSample";
 
     // The namespace to apply to the generated classes
-    string classNamespace = "BCS.Data.Entities";
+    string classNamespace = "ApiSample.Data.Entities";
 
     var manager = Manager.Create(Host, GenerationEnvironment);
 
@@ -65,10 +65,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
- 
-using BCS.Core;
-using BCS.Core.Data;
-using BCS.Core.Data.Entities;
+
 
 namespace <#= classNamespace #>
 {

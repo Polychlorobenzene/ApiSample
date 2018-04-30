@@ -10,56 +10,13 @@
 //	string[] tablesToInclude = new string[] {"ManagingOrganization", "ManagingOrganizationStatus","ManagingOrganizationType","InquiryType","Entity","ApplicationState","ApplicantContact", "AliasSource","ApplicantAddress","CrimeDegreeType","State","SelfDisclosureQuestion","ContactTypeModifier","ContactType","AddressType","Applicant","Application","ApplicantAlias","Contact","SelfDisclosure","ApplicationSelfDisclosureAnswer","DriversLicense","Address","TemporalBatch"};
 
 	string[] _tablesWithUniquePks = new string[] {
-		"User"
+
 	};
 	string[] includedDynamicTables = new string[] {
-		"ManagingOrganization",
-		"Entity",
-		"Message",
-		"Applicant",
-		"ApplicantContact",
-		"ApplicantAddress",
-		"SelfDisclosureQuestion",
-		"Application",
-		"ApplicantAlias",
-		"Contact",
-		"SelfDisclosure",
-		"ApplicationSelfDisclosureAnswer",
-		"Address",
-		"DriversLicense",
-		//"TemporalBatch",  Leave this commented out for now -- moved into bcs.data.core project ...
-		"InquiryType",
-		"Queue",
-		"WorkflowTask",
-		"WorkflowTaskOrderTemplate",
-		"InquiryTypeGroup",
-		"InquiryTypeGroupAccountInformation",
-		"InquiryTypeGroupBackgroundCheckTypeAssoc",
-		"InquiryTypeGroupDataSourceTypeAssoc",
-		"DisqualifyingCrimeListMasterCrimeTypeAssoc",
-		"InquiryTypeGroupDocumentTemplateTypeAssoc",
-		"InquiryTypeChangeHistory",
-		"ManagingOrganizationChangeHistory"
+		"Person"
 	};
 
 	string[] includeStaticTables = new string[] {
-		"OrganizationStatus",
-		"ManagingOrganizationType",
-		"ApplicationState",
-		"AliasSource",
-		"CrimeDegreeType",
-		"State",
-		"ContactTypeModifier",
-		"MessageType",
-		"ContactType",
-		"AddressType",
-		"ApplicantType",
-		"ResultLetterType",
-		"MasterCrimeType",
-		"QueueState",
-		"QueueResult",
-		"WorkRecordType",
-		"DocumentTemplateType",
-		"DisqualifyingCrimeList"
+		
 	};
 #>

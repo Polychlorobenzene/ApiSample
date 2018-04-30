@@ -64,6 +64,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Data\DataRetrieval.csproj">
+      <Project>{9ad8a243-1094-4383-a426-274807dac4e5}</Project>
+      <Name>DataRetrieval</Name>
+    </ProjectReference>
     <ProjectReference Include="..\WebApi\WebApi.csproj">
       <Project>{2d0c7f61-9b0d-45e5-9c59-1f621bbe2717}</Project>
       <Name>WebApi</Name>

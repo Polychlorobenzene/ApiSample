@@ -1,0 +1,42 @@
+﻿using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+using System.Linq;
+using System.Configuration;
+
+using ApiSample.Data.Repositories;
+using ApiSample.Data.Entities;
+using ApiSample.Data;
+
+namespace DataTests
+{
+    [TestClass]
+    public class DataTests
+    {
+        [TestMethod]
+        public void TestGetPeopleWithDefaults()
+        {
+            using (ApiSampleRepository repository = new ApiSampleRepository())
+            {
+                PagedSearchDto dto = new PagedSearchDto();
+                dto.PageSize = 25;
+                dto.PageNumber = 2;
+                dto.OrderByColumn = "PersonId";
+                dto.OrderAscending = true;
+                dto.TotalRows = 0;
+                List<PersonSearchResults> results = repository.SearchPeople(dto);
+                Assert.IsTrue(results.Count == 25);
+                Assert.IsTrue(results.First().PersonId == 26);
+            }
+        }
+        [TestMethod]
+        public void TestGetPeople()
+        {
+            using (ApiSampleDbContext context = new ApiSampleDbContext())
+            {
+                var people = context.Persons.Take(25);
+                Assert.IsTrue(people.Count() == 25);
+            }
+        }
+    }
+}

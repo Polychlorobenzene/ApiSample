@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Web.Http;
 
 using WebApi.Handlers;
+using ApiSample.Data.Repositories;
+using ApiSample.Data.Entities;
 
 namespace WebApi.Controllers
 {
@@ -115,6 +117,16 @@ namespace WebApi.Controllers
             };
 
             return Ok(m1);
+        }
+
+        [HttpPost, Route("api/Values/Person/Search")]
+        public IHttpActionResult SearchPeople(PagedSearchDto dto)
+        {
+            using (ApiSampleRepository rep = new ApiSampleRepository())
+            {
+                var results = rep.SearchPeople(dto);
+                return Ok(results);
+            }
         }
 
         [Route("api/Values/Exception")]

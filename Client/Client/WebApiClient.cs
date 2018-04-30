@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
+using ApiSample.Data.Entities;
 using WebApi;
 
 namespace ApiClient
@@ -43,6 +44,12 @@ namespace ApiClient
         {
             var uri = BuildUri($"Values/Exception");
             return await GetAsync<ApiResponse>(uri);
+        }
+        
+        public async Task<ApiResponse> GetPeople(PagedSearchDto dto)
+        {
+            var uri = BuildUri($"Values/Person/Search");
+            return await PostResultAsync<PagedSearchDto>(uri, dto);
         }
 
     }
