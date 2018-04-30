@@ -1,0 +1,658 @@
+﻿<#@ template debug="true" hostSpecific="true" #>
+<#@ assembly Name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data.Entity.Design" #>
+
+<#@ import namespace="System.Globalization" #>
+<#@ import namespace="System.Data.Entity.Design.PluralizationServices" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating" #>
+<#
+
+// t4 helpers - adds logging, error handling, multi file output, and output added to the project under a named root project item.
+// mick owen 10/11/2014
+
+#>
+<#+
+private T4Helpers _t4;
+public T4Helpers T4 {
+	get {
+		if (_t4 == null)
+			_t4 = new T4Helpers(Host, this);
+		return _t4;
+	}
+}
+
+public void Log(string message) {
+	T4.Log(message);
+}
+
+public void Indent(int levels) {
+	T4.Indent(levels);
+}
+
+public void Indent() {
+	T4.Indent();
+}
+
+public void Outdent() {
+	T4.Outdent();
+}
+
+public void Outdent(int levels) {
+	T4.Outdent(levels);
+}
+
+public void LineOut(string text = "")
+{
+	T4.LineOut(text);
+}
+
+public void TextOut(string text = "")
+{
+	T4.TextOut(text);
+}
+
+public void Comment(string text)
+{
+	T4.Comment(text);
+}
+
+public class T4Helpers {
+	public bool NewLogOnStart = true;
+	private ITextTemplatingEngineHost Host;
+	private GeneratedTextTransformation Gtt;
+	private PluralizationService Pluralizer;
+
+	public string IndentString = "\t"; // defaults to a tab but accessable for change
+	public ProjectItem ProjectItem;
+	public Project Project;
+	public EnvDTE.DTE Dte;
+
+	public T4Helpers(ITextTemplatingEngineHost host, GeneratedTextTransformation gtt)
+	{
+		Host = host;
+		Gtt = gtt;
+		Pluralizer = PluralizationService.CreateService(new CultureInfo("en-us"));
+
+		// Get DTE
+		if (host is IServiceProvider)
+		Dte = (EnvDTE.DTE)((IServiceProvider)Host).GetService(typeof(EnvDTE.DTE));
+		IServiceProvider hostServiceProvider = (IServiceProvider)Host;
+
+		// Get ProjectItem representing the template file
+		if (Dte != null)
+			ProjectItem = Dte.Solution.FindProjectItem(Host.TemplateFile);
+
+		// Get the Project of the template file
+		if (ProjectItem != null)
+			Project = ProjectItem.ContainingProject;
+
+		if (NewLogOnStart)
+		{
+			Delete(Logfile);
+        }
+		Log(TemplateName + " generation begins " + DateTime.Now.ToString("yyyy.MM.dd"));
+
+	}
+
+	public string Pluralize(string s) {
+		s = Pluralizer.Pluralize(s);
+		if (s.Length >= 6 && 0 == string.Compare(s.Substring(s.Length - 6), "Status", StringComparison.CurrentCultureIgnoreCase))
+			s += "es";
+		return s;
+	}
+
+	public void Indent() {
+		Gtt.PushIndent(IndentString);
+	}
+
+	public void Indent(int levels) {
+		while(levels-- > 0)
+			Indent();
+	}
+
+	public void Outdent() {
+		Gtt.PopIndent();
+	}
+
+	public void Outdent(int levels) {
+		while(levels-- > 0)
+			Outdent();
+	}
+
+	public void LineOut(string text = "")
+	{
+		Gtt.WriteLine(text);
+	}
+
+	public void TextOut(string text = "")
+	{
+		Gtt.Write(text);
+	}
+
+	public string CommentText(string text)
+	{
+		return Extension == ".html"
+			? (text == null ? string.Empty: "<!-- " + text + " -->")
+			: CommentPefix + " " + text ?? string.Empty;
+	}
+
+	public void Comment(string text)
+	{
+		LineOut(CommentText(text));
+	}
+
+	public string ExtensionType
+	{
+		get
+        {
+			switch(Extension)
+			{
+				case ".js":
+					return "Javasript";
+				case ".txt":
+					return "Text";
+				case ".html":
+					return "HTML";
+				case ".sql":
+					return "TSQL";
+				default:
+					return "C-Sharp";
+			}
+        }
+	}
+
+	public void Begin(string extension)
+	{
+		Extension = extension;
+		Log("Generating " + ExtensionType + "...");
+		Gtt.GenerationEnvironment = new StringBuilder();
+		_headerLines = new List<string>();
+	}
+
+	private string _extension = ".cs"; // default
+	public string Extension
+	{
+		get
+		{
+			return _extension;
+		}
+		set
+		{
+			var s = (value ?? string.Empty).Trim();
+			_extension = (s.Length > 0 && s.IndexOf(".") != 0 ? "." : string.Empty) + s;
+		}
+	}
+
+	public string Header
+	{
+		get
+		{
+			const string nl = "\r\n";
+			const string hr = "-"; // horizontal rule
+			const int hrWidth = 80;
+			var cp = string.IsNullOrWhiteSpace(CommentPefix) ? string.Empty: CommentPefix;
+            Func<bool, string> sep = begin => {
+                if (Extension == ".html")
+                    return begin
+                        ? ("<!" + new StringBuilder().Insert(0, hr, hrWidth).ToString())
+                        : (new StringBuilder().Insert(0, hr, hrWidth).ToString() + ">");
+                if (Extension == ".txt")
+				{
+					cp = string.Empty;
+                    return new StringBuilder().Insert(0, hr, hrWidth).ToString();
+				}
+                return begin
+                    ? cp + (new StringBuilder().Insert(0, hr, hrWidth).ToString() + nl + cp + "<auto-generated>")
+                    : (cp + "</auto-generated>" + nl + cp + new StringBuilder().Insert(0, hr, hrWidth).ToString() + nl);
+            };
+			var extras = string.Empty;
+			if (_headerLines.Count > 0)
+			{
+				extras += cp + nl;
+				foreach (var line in HeaderLines)
+					extras += cp + line + nl;
+			}
+			return sep(true) + nl
+				+ cp + nl
+				+ cp + "Build Time: " + BuildTime + nl
+				+ extras
+				+ cp + nl
+				+ cp + "This file was generated by a t4 template at the following path:" + nl
+				+ cp + IndentString + TemplateFile + nl
+				+ cp + nl
+				+ cp + "Modify the template if changes are necessary." + nl
+				+ cp + nl
+				+ sep(false);
+        }
+	}
+
+	private List<string> _headerLines = new List<string>();
+	public List<string> HeaderLines
+	{
+		get
+		{
+			return _headerLines;
+		}
+	}
+
+	public string CommentPefix
+	{
+		get
+		{
+			// for our purposes here, we only care about the last extension
+			Func<string> finalExtension = () => {
+				var i = Extension.LastIndexOf(".");
+				return i < 0
+					? string.Empty
+					: Extension.Substring(i);
+			};
+			switch(finalExtension())
+			{
+				case ".html":
+				case ".txt":
+					return "";
+				case ".sql":
+					return "--> ";
+				default:	// .js && .cs
+					return "// ";
+			}
+		}
+	}
+
+	public void Delete(string file)
+	{
+		ProjectItem item = FindProjectItemByFile(file);
+		if (item != null)
+			item.Delete();
+    }
+
+	public ProjectItem FindProjectItemByFile(string file)
+	{
+		var itemName = Path.GetFileName(file);
+		foreach(ProjectItem pi in ProjectItem.ProjectItems)
+			if (pi.Name == itemName)
+				return pi;
+		return null;
+	}
+
+	public void Clear() 
+	{
+		Gtt.GenerationEnvironment = new StringBuilder(" ");
+	}
+
+	StringBuilder sbSaveBuffer = null;
+	public void SaveBuffer()
+	{
+		sbSaveBuffer = Gtt.GenerationEnvironment;
+	}
+
+	public void RestoreBuffer()
+	{
+		Gtt.GenerationEnvironment = sbSaveBuffer == null ? new StringBuilder(" "): sbSaveBuffer;
+	}
+
+	public void Commit() 
+	{
+		var ttInc = Extension == ".ttinclude";
+		if (!ttInc)
+			Gtt.GenerationEnvironment.Insert(0, Header);
+		GenerateFile(Path.Combine(TemplatePath, OutputFilename), null);
+	}
+
+	public void CommitChild(string filePathName)
+	{
+	
+		var ttInc = System.IO.Path.GetExtension(filePathName) == ".ttinclude";
+		GenerateFile(filePathName, (ttInc ? string.Empty: Header) + Gtt.GenerationEnvironment.ToString());
+		ProjectItem.ProjectItems.AddFromFile(filePathName);
+	}
+
+	public void CommitChild()
+	{
+		CommitChild(Path.Combine(TemplatePath, OutputFilename));
+	}
+
+	private void GenerateFile(string pathName, string content)
+	{
+		if (content == null)
+			Log("No content, file not Generated: " + Path.GetFileName(pathName));
+		else
+		{
+			File.WriteAllText(pathName, content);
+			Log("Generated file: " + Path.GetFileName(pathName));
+			Log("Saved as: " + pathName);
+		}
+	}
+
+	public void Commit(string pathName, StringBuilder buffer)
+	{
+		var ttInc = System.IO.Path.GetExtension(pathName) == ".ttinclude";
+		var txt = (ttInc ? string.Empty: Header) + buffer.ToString();
+		GenerateFile(pathName, txt);
+    }
+	
+	public void Commit(string pathName)
+	{
+		var ttInc = System.IO.Path.GetExtension(pathName) == ".ttinclude";
+		var txt = (ttInc ? string.Empty: Header) + Gtt.GenerationEnvironment.ToString();
+		GenerateFile(pathName, txt);
+		ProjectItem.ProjectItems.AddFromFile(pathName);
+    }
+
+	// Example: var outputFilePathName = T4.CommitProjectFolder("Sql Scripts");
+	public string CommitProjectFolder(string projectFolder)
+	{
+		return CommitProjectFolder(OutputFilename, projectFolder);
+	}
+
+	public string ProjectFolderPath(string projectFolder){
+		var piContainer = FindProjectItem(Project.ProjectItems, projectFolder);
+		return (piContainer == null) ? (string)null: GetProjectItemFullPath(piContainer);
+	}
+
+	// Example: var outputFilePathName = T4.CommitProjectFolder("myFile.sql", "Sql Scripts");
+	public string CommitProjectFolder(string projectFolder, string filename)
+	{
+		var piContainer = FindProjectItem(Project.ProjectItems, projectFolder);
+		if (piContainer != null)
+        {
+			var file = Path.Combine(GetProjectItemFullPath(piContainer), filename);
+			GenerateFile(file, Header + Gtt.GenerationEnvironment.ToString());
+			piContainer.ProjectItems.AddFromFile(file);
+			return file;
+        }
+		Log("ERROR: project path not found: \"" + projectFolder + "\"; failed to commit file \"" + filename + "\"");
+		return null;
+    }
+
+	public string GetProjectItemFullPath(ProjectItem projectItem)
+	{
+		var fullPath = projectItem.Properties.Item("FullPath");
+		return fullPath == null ? string.Empty: fullPath.Value.ToString();
+	}
+
+	public ProjectItem[] GetProjectFolderItems(string projectFolder, bool includeSubfolders = false)
+	{
+		var folder = FindProjectItem(Project.ProjectItems, projectFolder);
+		return folder == null
+			? new ProjectItem[0]
+			: GetProjectFolderItems(folder, includeSubfolders);
+	}
+
+	public Func<string, bool> IsPhysicalFolderKind = kind => kind == "{6BB5F8EF-4483-11D3-8BCF-00C04F8EC28C}";
+	public Func<string, bool> IsPhysicalFileKind = kind => kind ==   "{6BB5F8EE-4483-11D3-8BCF-00C04F8EC28C}";
+	public Func<string, bool> IsSubProjectKind = kind => kind == "{EA6618E8-6E24-4528-94BE-6889FE16485C}";
+	public Func<string, bool> IsVirtualFolderKind = kind => kind == "{6BB5F8F0-4483-11D3-8BCF-00C04f8EC28C}";
+
+	public string KindToName (string kind) {
+		return IsPhysicalFileKind(kind)
+			? "Physical File"
+			: IsPhysicalFolderKind(kind)
+				? "Physical Folder"
+				: IsSubProjectKind(kind)
+					? "Sub Project"
+					: IsVirtualFolderKind(kind)
+						? "Virtual Folder"
+						: "Unknown";
+	}
+
+	public ProjectItem[] GetProjectFolderItems(ProjectItem folder, bool includeSubfolders = false)
+	{
+		var items = new List<ProjectItem>();
+		foreach (ProjectItem item in folder.ProjectItems)
+			if (IsPhysicalFileKind(item.Kind))
+				items.Add(item);
+			else if (includeSubfolders && IsPhysicalFolderKind(item.Kind))
+				items.AddRange(GetProjectFolderItems(item, true));
+		return items.ToArray();
+	}
+
+	public ProjectItem FindProjectItem(string find)
+	{
+		return FindProjectItem(Project.ProjectItems, find);
+	}
+
+	public ProjectItem FindProjectFolder(ProjectItems projectItems, string find) {
+		foreach (ProjectItem item in projectItems)
+			if (item.Name == find && IsPhysicalFolderKind(item.Kind))
+				return item;
+		return null;
+	}
+
+	public ProjectItem FindProjectFile(ProjectItems projectItems, string find) {
+		foreach (ProjectItem item in projectItems)
+			if (item.Name == find && IsPhysicalFileKind(item.Kind))
+				return item;
+		return null;
+	}
+
+	Func<ProjectItem, string, bool> itemHasName = (pi, find) => {
+		return 0 == string.Compare(find, pi.Name, StringComparison.CurrentCultureIgnoreCase);
+	};
+
+	public ProjectItem FindProjectItem(ProjectItem pi, string find)
+	{
+		return pi == null
+			? null
+			: itemHasName(pi, find)
+				? pi
+				: FindProjectItem(pi.ProjectItems, find);
+	}
+
+	public ProjectItem FindProjectItem(ProjectItems projectItems, string find)
+	{
+		var ndx = find.IndexOf(@"\", StringComparison.CurrentCulture);
+		if (ndx > 0) { // path is nested
+			var folder = FindProjectFolder(projectItems, find.Substring(0, ndx));
+			return folder != null
+				? FindProjectItem(folder.ProjectItems, find.Substring(ndx + 1))
+				: null;
+		}
+
+		ProjectItem found = null;
+		foreach (ProjectItem item in projectItems)
+			if (itemHasName(item, find))
+				return item;
+		return null;
+	}
+
+	// EnvDTE.Constants.vsProjectItemKindMisc
+	// EnvDTE.Constants.vsProjectItemKindPhysicalFile	
+	// EnvDTE.Constants.vsProjectItemKindPhysicalFolder	
+	// EnvDTE.Constants.vsProjectItemKindSolutionItems	
+	// EnvDTE.Constants.vsProjectItemKindSubProject	
+	// EnvDTE.Constants.vsProjectItemKindVirtualFolder	
+	// EnvDTE.Constants.vsProjectItemsKindMisc	
+	// EnvDTE.Constants.vsProjectItemsKindSolutionItems	
+	// EnvDTE.Constants.vsProjectKindMisc	
+	// EnvDTE.Constants.vsProjectKindSolutionItems	
+	// EnvDTE.Constants.vsProjectKindUnmodeled	
+	// EnvDTE.Constants.vsProjectsKindSolution	
+	// EnvDTE.Constants.vsSolutionItemsProjectUniqueName	
+
+	public string ProjectName
+    {
+		get
+		{
+			return Project.UniqueName;
+		}
+	}
+
+	public string TemplatePath
+    {
+		get
+		{
+			return Path.GetDirectoryName(TemplateFile);
+		}
+	}
+
+	public string TemplateName
+    {
+		get
+		{
+			return ProjectItem.Name;
+		}
+	}
+
+	public string TemplateBase
+    {
+		get
+		{
+			return Path.GetFileNameWithoutExtension(TemplateFile);
+		}
+	}
+
+	public string TemplateFile
+    {
+		get
+		{
+			return Host.TemplateFile;
+		}
+    }
+
+	private readonly Func<string, string[]> ParseLabelWords = label =>
+		Regex.Split(Regex.Replace(label, @"([a-z])([A-Z])", "$1 $2").Trim('.', '-', ' '), @"\.|\-| ")
+			.Select(i => i.ToLower())
+			.ToArray();
+
+	public string ToPascalCase(string label)
+	{
+		var stringBuilder = new StringBuilder();
+		var words = ParseLabelWords(label);
+		foreach (var w in words)
+			stringBuilder.Append(w.Length > 0 ? w.Substring(0, 1).ToUpper() + w.Substring(1) : string.Empty);
+		return stringBuilder.ToString();
+	}
+
+	public string ToCamelCase(string label)
+	{
+		var words = ParseLabelWords(label);
+		var stringBuilder = new StringBuilder(words[0].ToLower());
+		for (var i = 1; i < words.Length; i++)
+			stringBuilder.Append(words[i].Length > 0 ? words[i].Substring(0, 1).ToUpper() + words[i].Substring(1) : words[i].ToUpper());
+		return stringBuilder.ToString();
+	}
+
+	// returns an anonomous object's property value if it exists
+	public object GetPropertyValue(object o, string propertyName) 
+	{
+		var p = o.GetType().GetProperty(propertyName);
+		return p != null ? p.GetValue(o, null): null;
+	}
+	
+	public string Namespace
+	{
+		get
+		{
+			return (string)System.Runtime.Remoting.Messaging.CallContext.LogicalGetData("NamespaceHint");
+		}
+	}
+
+	public string RootNamespace
+	{
+		get
+		{
+			return (string)Project.Properties.Item("RootNamespace").Value;
+		}
+	}
+
+	// 10.11.2014 8:03:41.311
+	public string BuildTime {
+		get {
+			return DateTime.Now.ToString("M.d.yyyy h:mm:ss.fff");
+		}
+	}
+
+	public string OutputFilename
+	{
+		get
+		{
+			return TemplateBase + Extension;
+		}
+	}
+	
+	private string Logfile {
+		get
+		{
+			return Path.Combine(TemplatePath, TemplateBase + ".log");
+		}
+	}
+
+	public string formatLogEntry(string text)
+	{
+		return DateTime.Now.ToString("h:mm:ss.fff ") + text;
+	}
+
+	public bool ExitOnExceptions = true;
+
+	public void Log(string text)
+	{
+		using (var writer = File.AppendText(Logfile))
+			writer.WriteLine(formatLogEntry(text));
+		ProjectItem.ProjectItems.AddFromFile(Logfile);
+	}
+
+	public void Log(Exception ex, bool ignoreExitOnExecptions = false)
+	{
+		Log("Error: " + ex.Message
+			+ (string.IsNullOrWhiteSpace(ex.StackTrace) 
+				? string.Empty
+				: "\r\nStack Trace: " + ex.StackTrace)
+		);
+		if (!ignoreExitOnExecptions && ExitOnExceptions)
+			throw ex;
+	}
+
+	private string enumToString(string value){
+		return value.Replace(" ", "").Replace("/", "").Replace("?", "");
+	}
+
+	public void WriteLookupFlagEnumeration(string enumName, string[] lookupNames) {
+		LineOut("[Flags]");
+		TextOut("public enum " + enumName + " { ");
+		if (lookupNames.Length != 0) {
+			LineOut(string.Empty);
+			Indent();
+				var i = 0;
+				LineOut("None = 0");
+				foreach (var flag in lookupNames) {
+					LineOut(", " + enumToString(flag) + " = " + Math.Pow(2, i++));
+				}
+				LineOut((i==0 ? string.Empty: ", All") + " = " + (Math.Pow(2, i++) - 1));
+			Outdent();
+		}
+		LineOut("}");
+
+		LineOut(string.Empty);
+		LineOut("public static partial class ApplicationEnumExtensions {");
+		Indent();
+			LineOut("public static string Value(this " + enumName + " item) {");
+			Indent();
+				if (lookupNames.Length != 0)
+				{
+					LineOut("switch (item) {");
+					Indent();
+						foreach (var flag in lookupNames) {
+							LineOut("case " + enumName + "." + enumToString(flag) + ":");
+							Indent();
+								LineOut("return \"" + flag + "\";");
+							Outdent();
+						}
+					Outdent();
+					LineOut("}");
+				}
+				LineOut("return null;");
+			Outdent();
+			LineOut("}");
+		Outdent();
+		LineOut("}");
+	}
+}
+#>

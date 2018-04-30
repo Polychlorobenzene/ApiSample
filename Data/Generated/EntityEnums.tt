@@ -1,0 +1,244 @@
+﻿<#@ template debug="true" hostSpecific="true" #>
+<#@ assembly Name="EnvDTE" #>
+<#@ assembly Name="System" #>
+<#@ assembly Name="System.Core" #>
+<#@ assembly name="System.Xml" #>
+<#@ assembly name="System.Xml.Linq" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="Microsoft.SqlServer.ConnectionInfo" #>
+<#@ assembly name="Microsoft.SqlServer.Smo" #>
+<#@ import namespace="Microsoft.SqlServer.Management.Smo" #>
+<#@ import namespace="Microsoft.SqlServer.Management.Common" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#@ import namespace="System.Xml.XPath" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating" #>
+<#@ import namespace="EnvDTE" #>
+<#@ output extension=".cs" #>
+<#@ include file="..\..\includeTables.ttinclude" #>
+<#
+//	NOTE:
+//		the following boolean specifies whether enums are sourced from the includeTables.ttinclude file at the solution root
+//		- or -
+//		all lookup tables are included based on 1) they exist in the Lookup schema, and 2) they have a column named "Code"
+	const bool USE_INCLUDE_LIST = true;
+	string headerSourceMessage = USE_INCLUDE_LIST
+		? "NOTE: The following enums are sourced from the includeTables.ttinclude file located in at the solution root."
+		: "NOTE: The following lookup tables are included based on 1) they exist in the BCS.Lookup schema, and 2) they have a column named \"Code\".";
+
+
+	string config = System.IO.Path.Combine(System.IO.Directory.GetParent(System.IO.Path.GetDirectoryName(Host.TemplateFile)).FullName, "connectionStrings.Config");
+	Func<string, string> GetConnectionString = (name) => XDocument
+		.Load(config)
+		.XPathSelectElement(@"//connectionStrings/add [@name=""" + name + @"""]")
+		.Attribute("connectionString").Value;
+
+	Action<string, string> WriteIdLabelSummaryEnum = (indent, query) => {
+		using (SqlConnection conn = new SqlConnection(GetConnectionString("DefaultConnection")))
+		{
+			SqlCommand cmd = new SqlCommand(query, conn);
+			conn.Open();
+			using(SqlDataReader reader = cmd.ExecuteReader()) {
+				PushIndent(indent);
+				var data = reader.Read();
+				while (data)
+				{
+					string id = reader["Id"].ToString();
+					string label = T4.ToPascalCase(reader["Label"].ToString()
+						.Replace("&", "And")
+						.Replace(",", string.Empty)
+						.Replace(">=", "GreaterThanOrEqualTo")
+						.Replace("<", "_")
+						.Replace(">", "_")
+						.Replace("+", "Plus")
+						.Replace("/", " ")
+						.Replace("(", " ")
+						.Replace(")", " ")
+						.Replace("'", string.Empty)
+						.Replace("’", string.Empty)
+						.Replace("?", " "));
+					string summary = reader["Summary"].ToString();
+					data = reader.Read();
+					WriteLine(string.Empty);
+					if (!string.IsNullOrWhiteSpace(summary)){
+						WriteLine(@"/// <summary>" + summary.Replace("\r\n", string.Empty) + @"</summary>");
+					}
+					WriteLine(label.Replace("\r\n", string.Empty) + " = " + id + (data ? ",": string.Empty));
+				}
+				PopIndent();
+			}
+		} 
+	};
+
+
+T4.Begin("c#");
+T4.HeaderLines.Add("Script to generate enumerations.");
+T4.HeaderLines.Add(string.Empty);
+T4.HeaderLines.Add(headerSourceMessage);
+#>
+namespace BCS.Data.Entities
+{
+	public partial class Enums {
+<#
+	string connectionString = GetConnectionString("DefaultConnection");
+	List<EnumQueries.QueryData> includeQueries = new List<EnumQueries.QueryData>();
+	{
+		EnumQueries.QueryData[] queries = new EnumQueries
+		{
+			ConnectionString = connectionString,
+			DatabaseName = "BCS",
+			IncludeSchemas = new string[] { "Lookup" }
+		}.GetLookupQueries();
+
+		foreach (var query in queries)
+			if (!USE_INCLUDE_LIST || !includedDynamicTables.Contains(query.Table))
+				includeQueries.Add(query);
+	}
+	/**********************************************************************/
+	//Custom enums
+	WriteLine("\t\t#region Custom Enums");
+	WriteLine("\t\tpublic enum WorkflowTask:int {");
+	WriteIdLabelSummaryEnum("\t\t\t", "SELECT WorkflowTaskId AS Id, JobName AS Label, Name AS Summary FROM Work.WorkflowTask;");
+    WriteLine("\t\t}\r\n");
+
+	WriteLine("\t\t#endregion Custom Enums");
+	/**********************************************************************/
+	WriteLine("");
+	WriteLine("\t\t#region Lookup Enums");
+	foreach (var query in includeQueries)
+	{
+		WriteLine("\t\tpublic enum " + query.Table + query.EnumType + " {");
+		WriteIdLabelSummaryEnum("\t\t\t", query.SqlQuery());
+		WriteLine("\t\t}\r\n");
+	}
+	WriteLine("");
+	WriteLine("\t\t#endregion Lookup Enums");
+#>
+	}
+}
+<#
+	T4.Commit();
+	T4.Log("Generation Complete");
+#>
+
+<#@ include file="..\..\t4helpers.ttinclude" #>
+<#+
+
+public class EnumQueries
+{
+    // create enum  for all tables in IncludeSchemas having a column named "code"
+    public string DatabaseName;
+    public string ConnectionString;
+    public string[] IncludeSchemas;
+
+    public QueryData[] GetLookupQueries()
+    {
+        SqlConnection connection = new SqlConnection(ConnectionString);
+        ServerConnection conn = new ServerConnection(connection);
+        Server server = new Server(conn);
+        server.ConnectionContext.Connect();
+        List<QueryData> queries = new List<QueryData>();
+
+        foreach (Table table in server.Databases[DatabaseName].Tables)
+        {
+            if (IncludeSchemas.Contains(table.Schema) && table.Columns.Contains("Code"))
+            {
+                queries.Add(QueryData.Extract(table));
+            }
+        }
+        return queries.ToArray();
+    }
+
+    public class QueryData
+    {
+        public string Schema = null;
+        public string Table = null;
+        public string PrimaryColumn = null;
+        public bool NameExists;
+        public bool CodeExists;
+        public bool DescriptionExists;
+        public string CSharpTypeString;
+
+		public string EnumType
+		{
+			get
+			{
+				return (CSharpTypeString == "int") ? string.Empty: ": " + CSharpTypeString;
+			}
+		}
+
+        public static QueryData Extract(Table table)
+        {
+            QueryData queryData = new QueryData
+            {
+                Schema = table.Schema,
+                Table = table.Name
+            };
+
+            foreach (Column column in table.Columns)
+            {
+                if (column.InPrimaryKey)
+                {
+                    var dbType = column.DataType.ToString();
+                    if (dbType == "tinyint")
+                        queryData.CSharpTypeString = "byte";
+                    else if (dbType == "smallint")
+                        queryData.CSharpTypeString = "short";
+                    else
+                        queryData.CSharpTypeString = dbType; // int
+                    queryData.PrimaryColumn = column.Name;
+                }
+                else if (column.Name == "Description")
+                {
+                    queryData.DescriptionExists = true;
+                }
+                else if (column.Name == "Code")
+                {
+                    queryData.CodeExists = true;
+                }
+                else if (column.Name == "Name")
+                {
+                    queryData.NameExists = true;
+                }
+            }
+            return queryData;
+        }
+
+        public string SqlQuery()
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("SELECT ");
+            stringBuilder.Append(PrimaryColumn);
+            stringBuilder.Append(" AS Id, ");
+            stringBuilder.Append(NameExists ? "Name" : "Code");
+            stringBuilder.Append(" AS Label, ");
+            if (NameExists && DescriptionExists && CodeExists)
+            {
+                // when all three exist, prepend the code to the Summary
+                stringBuilder.Append("Code + ' - ' + Description AS Summary");
+            }
+            else if (NameExists && CodeExists)
+            {
+                // name && code -> label = name, description = code
+                stringBuilder.Append("Code AS Summary");
+            }
+            else if (CodeExists && DescriptionExists)
+            {
+                // name && description
+                stringBuilder.Append("Description AS Summary");
+            }
+            stringBuilder.Append(" FROM ");
+            stringBuilder.Append(Schema);
+            stringBuilder.Append(".");
+            stringBuilder.Append(Table);
+            stringBuilder.Append(";");
+            return stringBuilder.ToString();
+        }
+    }
+}
+#>
