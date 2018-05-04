@@ -40,6 +40,12 @@ namespace WebApi.Handlers
             {
                 return request.CreateResponse(HttpStatusCode.BadRequest, "Invalid Request");
             }
+            //From Http 1.1 Protocol: The 204 response MUST NOT include a message-body, and thus is always terminated by the first empty line after the header fields.
+            //https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.2.5
+            if (statusCode == HttpStatusCode.NoContent)
+            {                                
+                return request.CreateResponse(statusCode);
+            }
             object responseContent;
             if (response.TryGetContentValue(out responseContent))
             {
