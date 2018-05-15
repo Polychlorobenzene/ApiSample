@@ -36,6 +36,15 @@ namespace ApiTests
             Assert.IsTrue(d > 0);
         }
         [TestMethod]
+        public async Task TestGetStringStringDictionary()
+        {
+            ApiResponse data = await _Client.GetStringStringDictionary();
+            var d = data.GetTypedContent<Dictionary<string, string>>();
+            Assert.IsTrue(d.Keys.Count > 0);
+            Assert.AreEqual(data.ExpectedContentTypeSimplified, "IDictionary<string,string>");
+        }
+        
+        [TestMethod]
         public async Task TestGetDto()
         {
             ApiResponse data = await _Client.GetMyDto();

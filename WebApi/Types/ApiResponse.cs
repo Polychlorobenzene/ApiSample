@@ -6,6 +6,8 @@ using System.Net;
 using System.Web;
 using Newtonsoft.Json.Linq;
 
+using WebApi.Utility;
+
 namespace WebApi
 {
     public class ApiResponse
@@ -16,9 +18,20 @@ namespace WebApi
         public string ErrorMessage { get; set; }
         public object Content { get; set; }
         public DateTime Timestamp { get; set; }
-        public Type ExpectedContentType { get; set; }       
+        public Type ExpectedContentType { get; set; }
+        public string ExpectedContentTypeSimplified
+        {
+            get
+            {
+                if (ExpectedContentType != null)
+                {
+                    return ExpectedContentType.GetPrettyName();
+                }
+                else return null;
+            }
+        }
         public long? Size { get; set; }
-               
+
         /// <summary>
         /// Get
         /// </summary>

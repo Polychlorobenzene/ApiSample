@@ -24,6 +24,12 @@ namespace ApiClient
             return await GetAsync<ApiResponse>(uri);
         }
 
+        public async Task<ApiResponse> GetStringStringDictionary()
+        {
+            var uri = BuildUri($"Values/StringStringDictionary");
+            return await GetAsync<ApiResponse>(uri);
+        }        
+
         public async Task<ApiResponse> GetMyDto()
         {
             var uri = BuildUri($"Values/Dto");

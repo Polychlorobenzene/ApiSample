@@ -12,14 +12,17 @@ namespace WebApi.Handlers
     {
         protected override bool IsAuthorized(HttpActionContext actionContext)
         {
-            string expectedKey = "";
+            string expectedKey = "",
+                message = "Api Key did not match";
             expectedKey = ConfigurationManager.AppSettings["ClientKey"];
             IEnumerable<string> headerKey = new List<string>();
             if(actionContext.Request.Headers.TryGetValues("ClientKeyHeader", out headerKey))
             {
-                return headerKey.FirstOrDefault() == expectedKey;
+                if (headerKey.FirstOrDefault() == expectedKey)
+                    return true;
+                else throw new InvalidOperationException(message);
             }
-            return false;
+            throw new InvalidOperationException(message);
         }
     }
 }

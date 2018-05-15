@@ -52,6 +52,15 @@ namespace WebApi.Controllers
             return Ok(new string[] { "1", "2", "3" });
         }
 
+        [Route("api/Values/StringStringDictionary")]
+        public IHttpActionResult GetStringStringDictionary()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("one", "1");
+            dict.Add("two", "2");
+            return Ok(dict);
+        }
+
         [Route("api/Values/Dto")]
         public IHttpActionResult GetDto()
         {
