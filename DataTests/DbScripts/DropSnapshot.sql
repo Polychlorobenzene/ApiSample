@@ -1,0 +1,1 @@
+﻿DROP DATABASE [__snapshot__];

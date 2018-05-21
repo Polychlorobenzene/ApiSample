@@ -1,0 +1,1 @@
+﻿CREATE DATABASE [__snapshot__] ON (NAME = __dbName__, FILENAME = '__fileLocation__\\__snapshotFileName__') AS SNAPSHOT OF [__dbName__];
