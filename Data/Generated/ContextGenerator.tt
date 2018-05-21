@@ -86,6 +86,7 @@ namespace ApiSample.Data
     public partial class ApiSampleDbContext : DbContext
     {
 		public ApiSampleDbContext() : base("EntityConnection") { }
+		public ApiSampleDbContext(string connectionName) : base(connectionName) { }
 <# foreach(Table table in Utility.Tables)
 {
 #>

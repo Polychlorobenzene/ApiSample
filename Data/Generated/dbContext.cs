@@ -17,7 +17,8 @@ namespace ApiSample.Data
     public partial class ApiSampleDbContext : DbContext
     {
 		public ApiSampleDbContext() : base("EntityConnection") { }
-		public DbSet<Person> Persons { get; set; }
+        public ApiSampleDbContext(string connectionName) : base(connectionName) { }
+        public DbSet<Person> Persons { get; set; }
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
 			CustomOnModelCreating(modelBuilder);
